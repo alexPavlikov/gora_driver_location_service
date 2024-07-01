@@ -1,7 +1,13 @@
 package main
 
-import server "github.com/alexPavlikov/gora_driver_location_service/cmd"
+import (
+	"log"
+
+	server "github.com/alexPavlikov/gora_driver_location_service/cmd"
+)
 
 func main() {
-	server.MustRun()
+	if err := server.Run(); err != nil {
+		log.Fatal(err.Error())
+	}
 }

@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/alexPavlikov/gora_driver_location_service/internal/config"
-	"github.com/alexPavlikov/gora_driver_location_service/internal/driver"
+	"github.com/alexPavlikov/gora_driver_location_service/internal/server"
 )
 
 const (
@@ -17,22 +17,26 @@ const (
 )
 
 // Функция инициализации и запуска сервера
-func MustRun() {
-	cfg := config.MustLoad()
+func Run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
 
 	log := setupLogger(cfg.Env)
 
-	log.Info("starting application", slog.Any("config", cfg))
+	log.Info("starting application", "config", cfg)
 
-	driver.HandlerRequest()
+	server.HandlerRequest()
 
 	log.Info("initialization driver handlers")
 
 	if err := http.ListenAndServe(cfg.ServerPath+":"+fmt.Sprint(cfg.ServerPort), nil); err != nil {
 		log.Error("listen and serve server error", slog.Any("error", err.Error()))
-		panic("listen and serve server error" + err.Error())
+		return err
 	}
 
+	return nil
 }
 
 // Функция для инициализации слоя логирования
@@ -46,6 +50,8 @@ func setupLogger(env string) *slog.Logger {
 		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	case envProd:
 		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	default:
+		slog.SetDefault(log)
 	}
 
 	return log

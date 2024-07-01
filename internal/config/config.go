@@ -1,11 +1,12 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"os"
 	"time"
 
-	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -24,39 +25,60 @@ type Kafka struct {
 }
 
 // Функция чтения конфиг файла
-func MustLoad() *Config {
+func Load() (*Config, error) {
 
-	path := fetchConfigPath()
+	path, fileName := fetchConfigPath()
 
-	if path == "" {
-		panic("path to config file is empty")
-	}
-
-	_, err := os.Stat(path)
-	if err != nil {
-		panic("path to config file not exist")
+	if path == "" || fileName == "" {
+		return nil, errors.New("path or filename is empty")
 	}
 
 	var cfg Config
 
-	err = cleanenv.ReadConfig(path, &cfg)
+	err := initViper(path, fileName)
 	if err != nil {
-		panic("failed to read config" + err.Error())
+		return nil, err
 	}
 
-	return &cfg
+	cfg.Env = viper.GetString("env")
+	cfg.Timeout = viper.GetDuration("timeout")
+	cfg.ServerPort = viper.GetInt("server_port")
+	cfg.ServerPath = viper.GetString("server_path")
+	cfg.Kafka.Port = viper.GetInt("kafka.kafka_port")
+	cfg.Kafka.Path = viper.GetString("kafka.kafka_path")
+
+	return &cfg, nil
+}
+
+// Функция инициализации viper
+func initViper(path string, filename string) error {
+
+	viper.SetConfigName(filename)
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(path)
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Функция для определения какой файл конфига читать (local, dev, prod)
-func fetchConfigPath() string {
-	var res string
+func fetchConfigPath() (path string, file string) {
 
-	flag.StringVar(&res, "config", "", "path to config file")
+	flag.StringVar(&path, "config_path", "", "path to config file")
+	flag.StringVar(&file, "config_file", "", "config file name")
 	flag.Parse()
 
-	if res == "" {
-		res = os.Getenv("CONFIG_PATH")
+	if path == "" {
+		path = os.Getenv("CONFIG_PATH")
 	}
 
-	return res
+	if file == "" {
+		file = os.Getenv("CONFIG_FILE")
+	}
+
+	return path, file
 }
