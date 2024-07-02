@@ -2,18 +2,11 @@ package server
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
-	"os"
 
 	"github.com/alexPavlikov/gora_driver_location_service/internal/config"
+	"github.com/alexPavlikov/gora_driver_location_service/internal/kafka"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/server"
-)
-
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
 )
 
 // Функция инициализации и запуска сервера
@@ -23,36 +16,28 @@ func Run() error {
 		return err
 	}
 
-	log := setupLogger(cfg.Env)
+	// setup logger
+	log := config.SetupLogger(cfg.Env)
 
 	log.Info("starting application", "config", cfg)
 
+	// connect to kafka server
+	err = kafka.Connect(cfg)
+	if err != nil {
+		log.Error("kafka connect error", "error", err.Error())
+		return err
+	}
+
+	// init handler request
 	server.HandlerRequest()
 
 	log.Info("initialization driver handlers")
 
+	// load http server
 	if err := http.ListenAndServe(cfg.ServerPath+":"+fmt.Sprint(cfg.ServerPort), nil); err != nil {
-		log.Error("listen and serve server error", slog.Any("error", err.Error()))
+		log.Error("listen and serve server error", "error", err.Error())
 		return err
 	}
 
 	return nil
-}
-
-// Функция для инициализации слоя логирования
-func setupLogger(env string) *slog.Logger {
-	var log *slog.Logger
-
-	switch env {
-	case envLocal:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case envDev:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case envProd:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	default:
-		slog.SetDefault(log)
-	}
-
-	return log
 }

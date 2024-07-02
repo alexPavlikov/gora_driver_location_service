@@ -3,10 +3,17 @@ package config
 import (
 	"errors"
 	"flag"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/spf13/viper"
+)
+
+const (
+	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
 )
 
 type Config struct {
@@ -81,4 +88,22 @@ func fetchConfigPath() (path string, file string) {
 	}
 
 	return path, file
+}
+
+// Функция для инициализации слоя логирования
+func SetupLogger(env string) *slog.Logger {
+	var log *slog.Logger
+
+	switch env {
+	case envLocal:
+		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	case envDev:
+		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	case envProd:
+		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	default:
+		slog.SetDefault(log)
+	}
+
+	return log
 }
