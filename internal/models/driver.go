@@ -1,5 +1,12 @@
 package models
 
+const ( //ClassEnum
+	Bussines = "Bussines"
+	Comfort  = "Comfort"
+	Econom   = "Econom"
+	Cargo    = "Cargo"
+)
+
 type Driver struct {
 	ID       int
 	FullName string
@@ -11,8 +18,9 @@ type Driver struct {
 }
 
 type Cord struct {
-	Longitude string // ширина
-	Latitude  string // долгота
+	DriverID  int     `json:"driver_id"` // вопрос, как-то можно не дублировать это поле? Просто если мы определим только Cord, как понять чьи это координаты?
+	Longitude float32 `json:"longitude"` // ширина
+	Latitude  float32 `json:"latitude"`  // долгота
 }
 
 type Car struct {

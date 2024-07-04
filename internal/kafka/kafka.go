@@ -1,41 +1,29 @@
 package kafka
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/IBM/sarama"
-	"github.com/alexPavlikov/gora_driver_location_service/internal/config"
 )
 
-// // код просто скопировал :)
-// connect to kafka server
-func Connect(cfg *config.Config) error {
-	// responseChannels = make(map[string]chan *sarama.ConsumerMessage)
-
-	// Создание продюсера Kafka
-	producer, err := sarama.NewSyncProducer([]string{cfg.Kafka.Path + ":" + fmt.Sprint(cfg.Kafka.Port)}, nil)
+// Функция получения producer
+func GetProducer() (producer sarama.SyncProducer, err error) {
+	producer, err = sarama.NewSyncProducer([]string{"localhost:9092"}, nil) //....
 	if err != nil {
-		slog.Error("create producer kafka error" + err.Error())
+		slog.Error("create producer kafka error - " + err.Error())
+		return nil, err
+	}
+
+	return producer, nil
+}
+
+// Функция записи сообщения в kafka
+func WriteMessage(producer sarama.SyncProducer, msg *sarama.ProducerMessage) error {
+	_, _, err := producer.SendMessage(msg)
+	if err != nil {
+		slog.Error("write message to kafka error - " + err.Error())
 		return err
 	}
-	defer producer.Close()
-
-	// Создание консьюмера Kafka
-	consumer, err := sarama.NewConsumer([]string{cfg.Kafka.Path + ":" + fmt.Sprint(cfg.Kafka.Port)}, nil)
-	if err != nil {
-		slog.Error("create consumer kafka error" + err.Error())
-		return err
-	}
-	defer consumer.Close()
-
-	// Подписка на партицию "pong" в Kafka
-	partConsumer, err := consumer.ConsumePartition("pong", 0, sarama.OffsetNewest)
-	if err != nil {
-		slog.Error("subscribe to consume partition kafka error" + err.Error())
-		return err
-	}
-	defer partConsumer.Close()
 
 	return nil
 }
