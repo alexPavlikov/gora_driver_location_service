@@ -7,27 +7,22 @@ import (
 	"net/http"
 
 	"github.com/IBM/sarama"
-	"github.com/alexPavlikov/gora_driver_location_service/internal/kafka"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/models"
 )
 
-// Handler получающий координаты водителя
-func DriverPostCord(w http.ResponseWriter, r *http.Request) {
-	slog.Info("request DriverPostCord")
+type Handler struct {
+	Producer sarama.SyncProducer
+}
 
+// DriverPostCord получающий координаты водителя
+func (h *Handler) DriverPostCord(w http.ResponseWriter, r *http.Request) error {
 	var cord models.Cord
-
-	headerContentTtype := r.Header.Get("Content-Type")
-	if headerContentTtype != "application/json" {
-		slog.Error("driver post cord error content type")
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
+	// decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&cord); err != nil {
 		slog.Error("driver post cord error decode cord - " + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
+		return nil
 	}
 
 	msg := sarama.ProducerMessage{
@@ -35,16 +30,9 @@ func DriverPostCord(w http.ResponseWriter, r *http.Request) {
 		Value: sarama.StringEncoder(fmt.Sprint(cord.DriverID) + fmt.Sprint(cord.Latitude) + fmt.Sprint(cord.Longitude)),
 	}
 
-	producer, err := kafka.GetProducer()
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if _, _, err := h.Producer.SendMessage(&msg); err != nil {
+		return fmt.Errorf("failed to write message to kafka: %w", err)
 	}
 
-	defer producer.Close()
-
-	if err = kafka.WriteMessage(producer, &msg); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	slog.Info("write message completed")
+	return nil
 }

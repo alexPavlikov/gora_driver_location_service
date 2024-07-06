@@ -1,23 +1,23 @@
 package kafka
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/IBM/sarama"
 )
 
-// Функция получения producer
-func GetProducer() (producer sarama.SyncProducer, err error) {
-	producer, err = sarama.NewSyncProducer([]string{"localhost:9092"}, nil) //....
+// GetProducer Функция получения producer
+func GetProducer(address ...string) (producer sarama.SyncProducer, err error) {
+	producer, err = sarama.NewSyncProducer(address, nil) //....
 	if err != nil {
-		slog.Error("create producer kafka error - " + err.Error())
-		return nil, err
+		return nil, fmt.Errorf("error creating producer: %w", err)
 	}
 
 	return producer, nil
 }
 
-// Функция записи сообщения в kafka
+// WriteMessage Функция записи сообщения в kafka
 func WriteMessage(producer sarama.SyncProducer, msg *sarama.ProducerMessage) error {
 	_, _, err := producer.SendMessage(msg)
 	if err != nil {

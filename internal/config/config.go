@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -17,17 +18,20 @@ const (
 )
 
 type Config struct {
-	Env        string        `yaml:"env"`
-	Timeout    time.Duration `yaml:"timeout"`
-	ServerPath string        `yaml:"serverpath"`
-	ServerPort int           `yaml:"serverport"`
-	LogLevel   string        `yaml:"loglevel"`
-	Kafka      Kafka         `yaml:"kafka"`
+	Env      string        `mapstructure:"env"`
+	Timeout  time.Duration `mapstructure:"timeout"`
+	Server   Server        `mapstructure:"server"`
+	LogLevel string        `mapstructure:"loglevel"`
+	Kafka    Server        `mapstructure:"kafka"`
 }
 
-type Kafka struct {
-	Path string `yaml:"kafka.path"`
-	Port int    `yaml:"kafka.port"`
+type Server struct {
+	Path string `mapstructure:"path"`
+	Port int    `mapstructure:"port"`
+}
+
+func (s Server) String() string {
+	return fmt.Sprintf("%s:%d", s.Path, s.Port)
 }
 
 // Функция чтения конфиг файла
@@ -53,7 +57,7 @@ func Load() (*Config, error) {
 func initViper(path string, filename string, cfg Config) (Config, error) {
 
 	viper.SetConfigName(filename)
-	viper.SetConfigType("yaml")
+	viper.SetConfigType("mapstructure")
 	viper.AddConfigPath(path)
 
 	err := viper.ReadInConfig()
@@ -61,7 +65,9 @@ func initViper(path string, filename string, cfg Config) (Config, error) {
 		return cfg, err
 	}
 
-	viper.Unmarshal(&cfg)
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return cfg, fmt.Errorf("unable to decode config into struct, %v", err)
+	}
 
 	return cfg, nil
 }
@@ -85,7 +91,7 @@ func fetchConfigPath() (path string, file string) {
 }
 
 // Функция для инициализации слоя логирования
-func SetupLogger(logLevel string) *slog.Logger {
+func SetupLogger(logLevel string) {
 	var log *slog.Logger
 
 	switch logLevel {
@@ -98,6 +104,4 @@ func SetupLogger(logLevel string) *slog.Logger {
 	}
 
 	slog.SetDefault(log)
-
-	return log
 }
