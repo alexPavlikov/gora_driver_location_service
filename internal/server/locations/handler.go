@@ -3,48 +3,42 @@ package locations
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/IBM/sarama"
-	"github.com/alexPavlikov/gora_driver_location_service/internal/kafka"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/models"
+	"github.com/alexPavlikov/gora_driver_location_service/internal/server/service"
 )
 
+type Handler struct {
+	Service *service.Service
+}
+
 // Handler получающий координаты водителя
-func DriverPostCord(w http.ResponseWriter, r *http.Request) {
-	slog.Info("request DriverPostCord")
+func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (map[string]string, error) {
 
-	var cord models.Cord
+	ctx := r.Context()
 
-	headerContentTtype := r.Header.Get("Content-Type")
-	if headerContentTtype != "application/json" {
-		slog.Error("driver post cord error content type")
-		w.WriteHeader(http.StatusBadRequest)
-	}
+	topic := ctx.Value("Topic")
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&cord); err != nil {
-		slog.Error("driver post cord error decode cord - " + err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+	driverID := ctx.Value("Driver_id")
+
+	data.DriverID = driverID.(int)
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal data: %w", err)
 	}
 
 	msg := sarama.ProducerMessage{
-		Topic: "test",
-		Value: sarama.StringEncoder(fmt.Sprint(cord.DriverID) + fmt.Sprint(cord.Latitude) + fmt.Sprint(cord.Longitude)),
+		Topic: topic.(string),
+		Value: sarama.StringEncoder(jsonData),
+		Key:   sarama.StringEncoder("12"), /// !!!
 	}
 
-	producer, err := kafka.GetProducer()
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if err = h.Service.SendMessage(&msg); err != nil {
+		return nil, fmt.Errorf("failed to send message to kafka: %w", err)
 	}
 
-	defer producer.Close()
-
-	if err = kafka.WriteMessage(producer, &msg); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
-	slog.Info("write message completed")
+	return map[string]string{}, nil
 }
