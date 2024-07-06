@@ -23,14 +23,20 @@ func (r *RouterBuilder) Build() http.Handler {
 
 }
 
-type handlerWithError func(w http.ResponseWriter, r *http.Request) error
+type wrappedFunc[Input, Output any] func(r *http.Request, data Input) (Output, error)
 
-func handlerWrapper(fn handlerWithError) http.HandlerFunc {
+func handlerWrapper[Input, Output any](fn wrappedFunc[Input, Output]) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := fn(w, r); err != nil {
+		var data Input
+		//TODO decode
+
+		response, err := fn(r, data)
+		if err != nil {
 			slog.ErrorContext(r.Context(), "can't handle request", "error", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+		_ = response
+		//TODO encode response
 	}
 }

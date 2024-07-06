@@ -1,9 +1,7 @@
 package locations
 
 import (
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/IBM/sarama"
@@ -15,24 +13,16 @@ type Handler struct {
 }
 
 // DriverPostCord получающий координаты водителя
-func (h *Handler) DriverPostCord(w http.ResponseWriter, r *http.Request) error {
-	var cord models.Cord
-	decoder := json.NewDecoder(r.Body)
-	// decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&cord); err != nil {
-		slog.Error("driver post cord error decode cord - " + err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return nil
-	}
+func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (map[string]string, error) {
 
 	msg := sarama.ProducerMessage{
 		Topic: "test",
-		Value: sarama.StringEncoder(fmt.Sprint(cord.DriverID) + fmt.Sprint(cord.Latitude) + fmt.Sprint(cord.Longitude)),
+		Value: sarama.StringEncoder(fmt.Sprint(data.DriverID) + fmt.Sprint(data.Latitude) + fmt.Sprint(data.Longitude)),
 	}
 
 	if _, _, err := h.Producer.SendMessage(&msg); err != nil {
-		return fmt.Errorf("failed to write message to kafka: %w", err)
+		return nil, fmt.Errorf("failed to write message to kafka: %w", err)
 	}
 
-	return nil
+	return map[string]string{"status": "ok"}, nil
 }
