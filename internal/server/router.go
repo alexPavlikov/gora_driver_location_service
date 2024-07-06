@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -14,6 +15,12 @@ import (
 
 type RouterBuilder struct {
 	LocationsHandler *locations.Handler
+}
+
+func New(locationsHandler *locations.Handler) *RouterBuilder {
+	return &RouterBuilder{
+		LocationsHandler: locationsHandler,
+	}
 }
 
 func (r *RouterBuilder) Build() http.Handler {
@@ -60,7 +67,11 @@ func handlerWrapper[Input, Output any](fn wrappedFunc[Input, Output]) http.Handl
 			return
 		}
 
-		_ = response
-		// encode response
+		var buffer bytes.Buffer
+		if err = json.NewEncoder(&buffer).Encode(&response); err != nil {
+			slog.ErrorContext(r.Context(), "can't encode request", "error", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 	}
 }

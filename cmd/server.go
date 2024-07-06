@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -36,17 +37,11 @@ func Run() error {
 	// init handler request
 	slog.Info("initialization driver handlers")
 
-	locationsService := &service.Service{
-		Producer: producer,
-	}
+	locationsService := service.New(context.TODO(), producer)
 
-	locationsHandler := &locations.Handler{
-		Service: locationsService,
-	}
+	locationsHandler := locations.New(locationsService)
 
-	serverBuilder := server.RouterBuilder{
-		LocationsHandler: locationsHandler,
-	}
+	serverBuilder := server.New(locationsHandler)
 
 	srv := serverBuilder.Build()
 

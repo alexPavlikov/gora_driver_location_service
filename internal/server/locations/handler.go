@@ -14,8 +14,16 @@ type Handler struct {
 	Service *service.Service
 }
 
+func New(service *service.Service) *Handler {
+	return &Handler{
+		Service: service,
+	}
+}
+
+type emptyResponse struct{}
+
 // Handler получающий координаты водителя
-func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (map[string]string, error) {
+func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (emptyResponse, error) {
 
 	ctx := r.Context()
 
@@ -27,7 +35,7 @@ func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (map[string]
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal data: %w", err)
+		return emptyResponse{}, fmt.Errorf("failed to marshal data: %w", err)
 	}
 
 	msg := sarama.ProducerMessage{
@@ -37,8 +45,8 @@ func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (map[string]
 	}
 
 	if err = h.Service.SendMessage(&msg); err != nil {
-		return nil, fmt.Errorf("failed to send message to kafka: %w", err)
+		return emptyResponse{}, fmt.Errorf("failed to send message to kafka: %w", err)
 	}
 
-	return map[string]string{}, nil
+	return emptyResponse{}, nil
 }
