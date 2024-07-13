@@ -40,8 +40,8 @@ func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (emptyRespon
 
 	msg := sarama.ProducerMessage{
 		Topic: topic.(string),
+		Key:   sarama.StringEncoder(data.DriverID),
 		Value: sarama.StringEncoder(jsonData),
-		Key:   sarama.StringEncoder("12"), /// !!!
 	}
 
 	if err = h.Service.SendMessage(&msg); err != nil {

@@ -25,8 +25,9 @@ func Run() error {
 	// setup logger
 	config.SetupLogger(cfg.LogLevel)
 
-	slog.Info("starting application", "config", cfg)
+	slog.Info("starting application", "config", cfg) // убрать
 
+	// get producer for kafka
 	producer, err := kafka.GetProducer(cfg.Kafka.ToString())
 	if err != nil {
 		return fmt.Errorf("error creating producer: %w", err)
