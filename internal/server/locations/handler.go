@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/IBM/sarama"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/models"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/server/service"
 )
@@ -20,31 +19,29 @@ func New(service *service.Service) *Handler {
 	}
 }
 
+type DriverPostCordRequest struct {
+	Longitude float32 `json:"longitude"` // ширина
+	Latitude  float32 `json:"latitude"`  // долгота
+}
+
 type emptyResponse struct{}
 
 // Handler получающий координаты водителя
-func (h *Handler) DriverPostCord(r *http.Request, data models.Cord) (emptyResponse, error) {
+func (h *Handler) DriverPostCord(r *http.Request, data DriverPostCordRequest) (emptyResponse, error) {
 
 	ctx := r.Context()
 
-	topic := ctx.Value("Topic")
-
-	driverID := ctx.Value("Driver_id")
-
-	data.DriverID = driverID.(int)
-
-	jsonData, err := json.Marshal(data)
+	_, err := json.Marshal(data)
 	if err != nil {
 		return emptyResponse{}, fmt.Errorf("failed to marshal data: %w", err)
 	}
 
-	msg := sarama.ProducerMessage{
-		Topic: topic.(string),
-		Key:   sarama.StringEncoder(data.DriverID),
-		Value: sarama.StringEncoder(jsonData),
+	var msg = models.Cord{
+		Longitude: data.Longitude,
+		Latitude:  data.Latitude,
 	}
 
-	if err = h.Service.SendMessage(&msg); err != nil {
+	if err = h.Service.StoreMessage(ctx, msg); err != nil {
 		return emptyResponse{}, fmt.Errorf("failed to send message to kafka: %w", err)
 	}
 

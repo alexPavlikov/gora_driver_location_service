@@ -1,9 +1,10 @@
-env: "local" #dev, prod
+env: local #dev, prod
 timeout: 5s
-loglevel: "local"
+loglevel: local
 server:
     port: 10000
     path: localhost
 kafka:
     port: 9092
     path: localhost
+kafkatopic: drivers

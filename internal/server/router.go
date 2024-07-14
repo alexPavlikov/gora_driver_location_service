@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -11,6 +10,10 @@ import (
 	"github.com/alexPavlikov/gora_driver_location_service/internal/server/locations"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+)
+
+const (
+	DRIVER_ID string = "Driver_id"
 )
 
 type RouterBuilder struct {
@@ -28,7 +31,7 @@ func (r *RouterBuilder) Build() http.Handler {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 
-	router.Post("/v1/locations", handlerWrapper(r.LocationsHandler.DriverPostCord))
+	router.Post("/v1/locations/{id}", mware(handlerWrapper(r.LocationsHandler.DriverPostCord)))
 
 	return router
 }
@@ -39,24 +42,10 @@ func handlerWrapper[Input, Output any](fn wrappedFunc[Input, Output]) http.Handl
 	return func(w http.ResponseWriter, r *http.Request) {
 		var data Input
 
-		id, err := strconv.Atoi(r.Header.Get("Driver_id"))
-		if err != nil {
-			slog.ErrorContext(r.Context(), "failed to convert header value", "error", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		topic := r.Header.Get("Topic")
-
-		ctx := context.WithValue(context.Background(), "Driver_id", id)
-		ctx = context.WithValue(ctx, "Topic", topic)
-
-		r = r.WithContext(ctx)
-
 		decoder := json.NewDecoder(r.Body)
 		if err := decoder.Decode(&data); err != nil {
 			slog.ErrorContext(r.Context(), "can't decode data", "error", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			http.Error(w, "Bad request"+err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -67,11 +56,25 @@ func handlerWrapper[Input, Output any](fn wrappedFunc[Input, Output]) http.Handl
 			return
 		}
 
-		var buffer bytes.Buffer
-		if err = json.NewEncoder(&buffer).Encode(&response); err != nil {
+		if err = json.NewEncoder(w).Encode(&response); err != nil {
 			slog.ErrorContext(r.Context(), "can't encode request", "error", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
+	}
+}
+
+func mware(h http.HandlerFunc) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(chi.URLParam(r, "id"))
+		if err != nil {
+			slog.ErrorContext(r.Context(), "failed to convert dricer_id", "error", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		r = r.WithContext(context.WithValue(r.Context(), DRIVER_ID, id))
+		h.ServeHTTP(w, r)
 	}
 }

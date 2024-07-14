@@ -1,18 +1,24 @@
 package models
 
+import (
+	"time"
+)
+
+type ClassEnum string
+
 const ( //ClassEnum
-	Bussines = "Bussines"
-	Comfort  = "Comfort"
-	Econom   = "Econom"
-	Cargo    = "Cargo"
+	Bussines = ClassEnum("Bussines")
+	Comfort  = ClassEnum("Comfort")
+	Econom   = ClassEnum("Econom")
+	Cargo    = ClassEnum("Cargo")
 )
 
 type Driver struct {
 	ID       int
 	FullName string
 	Age      uint8
-	Exp      uint8 // опыт вождения
-	Rating   uint8 // делить на 10, пример 45 == 4.5 звезд
+	Exp      time.Duration // дата выдачи прав, вычисляемое значение
+	Rating   uint8         // делить на 10, пример 45 == 4.5 звезд
 	Cord     Cord
 	Car      Car
 }
@@ -28,10 +34,15 @@ type Car struct {
 	Model         string
 	Name          string
 	Year          uint16
-	Number        string // номер машины
-	Color         string // цвет машины
-	Class         string // бизнес, комфорт, эконом, грузовой
-	MaxPassangers uint8  // максимум пассажиров
-	BabyChair     bool   // наличие детского сидения
-	WithAnimals   bool   // разрешенно с животными
+	Number        string    // номер машины
+	Color         string    // цвет машины
+	Class         ClassEnum // бизнес, комфорт, эконом, грузовой
+	MaxPassangers uint8     // максимум пассажиров
+	BabyChair     bool      // наличие детского сидения
+	WithAnimals   bool      // разрешенно с животными
+}
+
+type CoordinatesPayload struct {
+	Key   int
+	Value []byte
 }

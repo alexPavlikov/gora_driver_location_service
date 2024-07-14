@@ -18,11 +18,12 @@ const (
 )
 
 type Config struct {
-	Env      string        `mapstructure:"env"`
-	Timeout  time.Duration `mapstructure:"timeout"`
-	Server   Server        `mapstructure:"server"`
-	LogLevel string        `mapstructure:"loglevel"`
-	Kafka    Server        `mapstructure:"kafka"`
+	Env        string        `mapstructure:"env"`
+	Timeout    time.Duration `mapstructure:"timeout"`
+	Server     Server        `mapstructure:"server"`
+	LogLevel   string        `mapstructure:"loglevel"`
+	Kafka      Server        `mapstructure:"kafka"`
+	KafkaTopic string        `mapstructure:"kafkatopic"`
 }
 
 type Server struct {

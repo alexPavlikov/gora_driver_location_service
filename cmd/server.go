@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"github.com/alexPavlikov/gora_driver_location_service/internal/kafka"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/server"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/server/locations"
+	"github.com/alexPavlikov/gora_driver_location_service/internal/server/repository"
 	"github.com/alexPavlikov/gora_driver_location_service/internal/server/service"
 )
 
@@ -22,29 +22,12 @@ func Run() error {
 		return err
 	}
 
-	// setup logger
-	config.SetupLogger(cfg.LogLevel)
-
-	slog.Info("starting application", "config", cfg) // убрать
-
-	// get producer for kafka
-	producer, err := kafka.GetProducer(cfg.Kafka.ToString())
+	srv, close, err := ServerLoad(cfg)
 	if err != nil {
-		return fmt.Errorf("error creating producer: %w", err)
+		return err
 	}
 
-	defer producer.Close()
-
-	// init handler request
-	slog.Info("initialization driver handlers")
-
-	locationsService := service.New(context.TODO(), producer)
-
-	locationsHandler := locations.New(locationsService)
-
-	serverBuilder := server.New(locationsHandler)
-
-	srv := serverBuilder.Build()
+	defer close()
 
 	// load http server
 	if err := http.ListenAndServe(cfg.Server.ToString(), srv); err != nil {
@@ -53,4 +36,32 @@ func Run() error {
 	}
 
 	return nil
+}
+
+func ServerLoad(cfg *config.Config) (http.Handler, func() error, error) {
+	// setup logger
+	config.SetupLogger(cfg.LogLevel)
+
+	slog.Info("starting application", "server config", cfg.Server.ToString())
+
+	// get producer for kafka
+	producer, err := kafka.GetProducer(cfg.Kafka.ToString())
+	if err != nil {
+		return nil, nil, fmt.Errorf("error creating producer: %w", err)
+	}
+
+	// init handler request
+	slog.Info("initialization driver handlers")
+
+	repository := repository.New(producer, *cfg)
+
+	service := service.New(repository)
+
+	handlers := locations.New(service)
+
+	serverBuilder := server.New(handlers)
+
+	srv := serverBuilder.Build()
+
+	return srv, producer.Close, nil
 }

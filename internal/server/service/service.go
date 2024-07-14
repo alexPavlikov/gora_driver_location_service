@@ -4,23 +4,36 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/IBM/sarama"
+	"github.com/alexPavlikov/gora_driver_location_service/internal/models"
+	"github.com/alexPavlikov/gora_driver_location_service/internal/server/repository"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type Service struct {
-	Ctx      context.Context
-	Producer sarama.SyncProducer
+	Repo *repository.Repo
 }
 
-func New(ctx context.Context, producer sarama.SyncProducer) *Service {
+func New(repo *repository.Repo) *Service {
 	return &Service{
-		Ctx:      ctx,
-		Producer: producer,
+		Repo: repo,
 	}
 }
 
-func (s *Service) SendMessage(msg *sarama.ProducerMessage) error {
-	if _, _, err := s.Producer.SendMessage(msg); err != nil {
+func (s *Service) StoreMessage(ctx context.Context, cord models.Cord) error {
+
+	var id = ctx.Value("Driver_id")
+
+	value, err := msgpack.Marshal(&cord)
+	if err != nil {
+		return fmt.Errorf("msgpack marshal err: %w", err)
+	}
+
+	var msg = models.CoordinatesPayload{
+		Key:   id.(int),
+		Value: value,
+	}
+
+	if err := s.Repo.SendMessage(ctx, msg); err != nil {
 		return fmt.Errorf("failed to write message to kafka: %w", err)
 	}
 
