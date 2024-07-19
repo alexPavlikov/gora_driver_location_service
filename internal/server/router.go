@@ -31,7 +31,8 @@ func (r *RouterBuilder) Build() http.Handler {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 
-	router.Post("/v1/locations/{id}", mware(handlerWrapper(r.LocationsHandler.DriverPostCord)))
+	router.Post("/v1/locations", middlewares(handlerWrapper(r.LocationsHandler.DriverPostCord)))
+	router.Get("/v1/locations/{id}", mware(handlerWrapper(r.LocationsHandler.ReadDriverCordMessage)))
 
 	return router
 }
@@ -42,11 +43,13 @@ func handlerWrapper[Input, Output any](fn wrappedFunc[Input, Output]) http.Handl
 	return func(w http.ResponseWriter, r *http.Request) {
 		var data Input
 
-		decoder := json.NewDecoder(r.Body)
-		if err := decoder.Decode(&data); err != nil {
-			slog.ErrorContext(r.Context(), "can't decode data", "error", err)
-			http.Error(w, "Bad request"+err.Error(), http.StatusBadRequest)
-			return
+		if r.Method != http.MethodGet {
+			decoder := json.NewDecoder(r.Body)
+			if err := decoder.Decode(&data); err != nil {
+				slog.ErrorContext(r.Context(), "can't decode data", "error", err)
+				http.Error(w, "Bad request"+err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 
 		response, err := fn(r, data)
@@ -69,7 +72,21 @@ func mware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
-			slog.ErrorContext(r.Context(), "failed to convert dricer_id", "error", err)
+			slog.ErrorContext(r.Context(), "failed to convert driver_id", "error", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		r = r.WithContext(context.WithValue(r.Context(), DRIVER_ID, id))
+		h.ServeHTTP(w, r)
+	}
+}
+
+func middlewares(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(r.Header.Get("X-ID"))
+		if err != nil {
+			slog.ErrorContext(r.Context(), "failed to convert driver_id", "error", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}

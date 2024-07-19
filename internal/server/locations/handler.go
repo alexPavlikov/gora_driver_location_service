@@ -1,7 +1,6 @@
 package locations
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -31,19 +30,24 @@ func (h *Handler) DriverPostCord(r *http.Request, data DriverPostCordRequest) (e
 
 	ctx := r.Context()
 
-	_, err := json.Marshal(data)
-	if err != nil {
-		return emptyResponse{}, fmt.Errorf("failed to marshal data: %w", err)
-	}
-
 	var msg = models.Cord{
 		Longitude: data.Longitude,
 		Latitude:  data.Latitude,
 	}
 
-	if err = h.Service.StoreMessage(ctx, msg); err != nil {
+	if err := h.Service.StoreMessage(ctx, msg); err != nil {
 		return emptyResponse{}, fmt.Errorf("failed to send message to kafka: %w", err)
 	}
 
+	return emptyResponse{}, nil
+}
+
+func (h *Handler) ReadDriverCordMessage(r *http.Request, data emptyResponse) (emptyResponse, error) {
+	ctx := r.Context()
+
+	if err := h.Service.ReadMessage(ctx); err != nil {
+		return emptyResponse{}, fmt.Errorf("failed to read message from kafka: %w", err)
+
+	}
 	return emptyResponse{}, nil
 }

@@ -22,7 +22,7 @@ func Run() error {
 		return err
 	}
 
-	srv, close, err := ServerLoad(cfg)
+	srv, close, err := NewServer(cfg)
 	if err != nil {
 		return err
 	}
@@ -38,9 +38,7 @@ func Run() error {
 	return nil
 }
 
-func ServerLoad(cfg *config.Config) (http.Handler, func() error, error) {
-	// setup logger
-	config.SetupLogger(cfg.LogLevel)
+func NewServer(cfg *config.Config) (http.Handler, func() error, error) {
 
 	slog.Info("starting application", "server config", cfg.Server.ToString())
 

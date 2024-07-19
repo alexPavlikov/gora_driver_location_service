@@ -21,7 +21,7 @@ type Config struct {
 	Env        string        `mapstructure:"env"`
 	Timeout    time.Duration `mapstructure:"timeout"`
 	Server     Server        `mapstructure:"server"`
-	LogLevel   string        `mapstructure:"loglevel"`
+	LogLevel   int           `mapstructure:"loglevel"`
 	Kafka      Server        `mapstructure:"kafka"`
 	KafkaTopic string        `mapstructure:"kafkatopic"`
 }
@@ -50,6 +50,11 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var level slog.Level = slog.Level(cfg.LogLevel)
+	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+
+	slog.SetDefault(log)
 
 	return &cfg, nil
 }
@@ -87,20 +92,4 @@ func fetchConfigPath() (path string, file string) {
 	}
 
 	return path, file
-}
-
-// Функция для инициализации слоя логирования
-func SetupLogger(logLevel string) {
-	var log *slog.Logger
-
-	switch logLevel {
-	case envLocal:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case envDev:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	case envProd:
-		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	}
-
-	slog.SetDefault(log)
 }
