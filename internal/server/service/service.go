@@ -40,11 +40,11 @@ func (s *Service) StoreMessage(ctx context.Context, cord models.Cord) error {
 	return nil
 }
 
-func (s *Service) ReadMessage(ctx context.Context) error {
-	var key = ctx.Value("Driver_id")
-	err := s.Repo.ReadMessage(ctx, key.(int))
+func (s *Service) ReadMessage(ctx context.Context) ([]models.Cord, error) {
+	cords, err := s.Repo.ReadMessageFromKafka()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	return cords, nil
 }

@@ -48,10 +48,17 @@ func NewServer(cfg *config.Config) (http.Handler, func() error, error) {
 		return nil, nil, fmt.Errorf("error creating producer: %w", err)
 	}
 
+	consumer, close, err := kafka.GetConsumer(cfg.Kafka.ToString())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed run server - kafka get consumer: %w", err)
+	}
+
+	defer close()
+
 	// init handler request
 	slog.Info("initialization driver handlers")
 
-	repository := repository.New(producer, *cfg)
+	repository := repository.New(*cfg, producer, consumer)
 
 	service := service.New(repository)
 
